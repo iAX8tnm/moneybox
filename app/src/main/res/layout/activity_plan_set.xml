@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginEnd="16dp"
+    tools:context=".PlanSetActivity">
+
+    <EditText
+        android:id="@+id/et_plan_set_goal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="24dp"
+        android:digits="0123456789"
+        android:hint="输入你的小目标"
+        android:maxLength="10"
+        android:maxLines="1"
+        app:layout_constraintStart_toEndOf="@+id/iv_plan_set_flag"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btn_plan_save_plan"
+        android:layout_width="91dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="8dp"
+        android:onClick="savePlan"
+        android:text="保存"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn_plan_cancel_plan" />
+
+    <Button
+        android:id="@+id/btn_plan_cancel_plan"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="8dp"
+        android:onClick="cancelPlan"
+        android:text="取消"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/btn_plan_save_plan"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_plan_set_￥"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:text="￥"
+        android:textSize="26sp"
+        app:layout_constraintStart_toEndOf="@+id/et_plan_set_goal"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="32dp"
+        android:text="完成日期："
+        android:textSize="16sp"
+        app:layout_constraintStart_toEndOf="@+id/iv_plan_set_calender"
+        app:layout_constraintTop_toBottomOf="@+id/et_plan_set_goal" />
+
+    <TextView
+        android:id="@+id/tv_plan_set_date"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="32dp"
+        android:text="2018/1/1"
+        android:textSize="16sp"
+        android:onClick="showDateDialogPick"
+        app:layout_constraintStart_toEndOf="@+id/textView3"
+        app:layout_constraintTop_toBottomOf="@+id/et_plan_set_goal"
+        tools:onClick="showDateDialogPick" />
+
+    <ImageView
+        android:id="@+id/iv_plan_set_calender"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="36dp"
+
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/iv_plan_set_flag"
+        app:srcCompat="@drawable/ic_calender" />
+
+    <EditText
+        android:id="@+id/et_plan_set_remarks"
+        android:layout_width="297dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="22dp"
+        android:layout_marginTop="32dp"
+        android:hint="添加备注"
+        android:maxLines="5"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/iv_plan_set_remarks"
+        app:layout_constraintTop_toBottomOf="@+id/textView3" />
+
+    <ImageView
+        android:id="@+id/iv_plan_set_flag"
+        android:layout_width="25dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="32dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_flag" />
+
+    <ImageView
+        android:id="@+id/iv_plan_set_remarks"
+        android:layout_width="26dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="42dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/iv_plan_set_calender"
+        app:srcCompat="@drawable/ic_remarks" />
+
+    <android.support.v4.view.ViewPager
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/btn_plan_cancel_plan"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</android.support.constraint.ConstraintLayout>

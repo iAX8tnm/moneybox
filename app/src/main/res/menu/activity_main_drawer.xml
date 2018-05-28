@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="none">
+        <item
+            android:id="@+id/nav_chart"
+            android:icon="@drawable/ic_menu_chart"
+            android:title="存钱曲线" />
+        <item
+            android:id="@+id/nav_plan"
+            android:icon="@drawable/ic_menu_plan"
+            android:title="存钱计划" />
+        <item
+            android:id="@+id/nav_lock"
+            android:icon="@drawable/ic_menu_lock"
+            android:title="开锁" />
+    </group>
+
+    <item android:title="关于">
+        <menu>
+            <item
+                android:id="@+id/nav_about"
+                android:icon="@drawable/ic_menu_about"
+                android:title="关于我们" />
+        </menu>
+    </item>
+
+</menu>
