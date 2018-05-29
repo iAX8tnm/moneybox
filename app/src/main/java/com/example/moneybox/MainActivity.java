@@ -79,6 +79,7 @@ public class MainActivity extends AppCompatActivity
             getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
         }
 
+        Log.d(TAG, "onCreate: test 33333333");
         Log.d(TAG, "onCreate: test 11111");
         Log.d(TAG, "onCreate: test 222223");
 
