@@ -80,9 +80,6 @@ public class MainActivity extends AppCompatActivity
         }
 
         Log.d(TAG, "onCreate: test 33333333");
-        Log.d(TAG, "onCreate: test 11111");
-        Log.d(TAG, "onCreate: test 222223");
-        Log.d(TAG, "onCreate: test 4444444");
 
         //后期计划添加splash启动页面
         //可收缩的Toolbar的显示设置
