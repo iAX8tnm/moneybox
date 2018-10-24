@@ -66,18 +66,18 @@ public class MainActivity extends AppCompatActivity
             TotalVal = pref.getInt("TotalVal", 0);
         }
         else Log.d(TAG, "onCreate: SQL is not exit! get data from Internet");
-        if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\"")) {
+        /*if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\"")) {
 
             Log.d(TAG, "onCreate: Connected to WIFI \"MONEY\" start to connect server");
             socket = SocketClient.getInstance();
             hasNeverConnectedToService = false;
 
-        } else {
+        } else {*/
 
             Log.d(TAG, "onCreate: WIFI \"MONEY\" is not connected! get new data from LEWEI50 from start time " + lastRequestDate);
 
             getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
-        }
+        //}
 
 
         //后期计划添加splash启动页面
@@ -104,11 +104,11 @@ public class MainActivity extends AppCompatActivity
         recyclerView.setLayoutManager(linearLayoutManager);
         recyclerView.setAdapter(adapter);
 
-        if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\""))
-            startReceiveMsgThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
+        //if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\""))
+        //    startReceiveMsgThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
 
         //下面是检查wifi状态改变的线程池
-        ScheduledExecutorService mCheckWIFIStateThreadPool = Executors.newScheduledThreadPool(1);
+        /*ScheduledExecutorService mCheckWIFIStateThreadPool = Executors.newScheduledThreadPool(1);
         mCheckWIFIStateThreadPool.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity
                     invalidateOptionsMenu();
                 }
             }
-        }, 0, 2, TimeUnit.SECONDS);
+        }, 0, 2, TimeUnit.SECONDS);*/
 
 
         Log.d(TAG, "onCreate: execute");
@@ -248,7 +248,7 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_chart) {
+        /*if (id == R.id.nav_chart) {
             Intent intent = new Intent(this, ChartActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_plan) {
@@ -267,7 +267,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_about) {
             Intent intent = new Intent(this, AboutActivity.class);
             startActivity(intent);
-        }
+        }*/
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
