@@ -40,7 +40,7 @@ import android.os.Handler;
 
 
 import static com.example.moneybox.MainActivity.fileIsExists;
-import static com.example.moneybox.parseData.parseStringDateToMillis;
+import static com.example.moneybox.util.DateUtil.parseStringDateToMillis;
 
 
 public class ChartActivity extends AppCompatActivity {

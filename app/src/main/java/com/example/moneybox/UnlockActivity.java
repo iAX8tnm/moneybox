@@ -20,8 +20,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import static com.example.moneybox.MainActivity.fileIsExists;
-import static com.example.moneybox.parseData.getTime;
-import static com.example.moneybox.parseData.getTodayDate;
+import static com.example.moneybox.util.DateUtil.getTime;
+import static com.example.moneybox.util.DateUtil.getTodayDate;
 
 public class UnlockActivity extends AppCompatActivity {
 

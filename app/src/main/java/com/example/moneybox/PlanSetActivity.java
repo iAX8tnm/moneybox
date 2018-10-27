@@ -17,8 +17,8 @@ import android.widget.Toolbar;
 
 import java.util.Calendar;
 
-import static com.example.moneybox.parseData.getCurrentDate;
-import static com.example.moneybox.parseData.getTodayDate;
+import static com.example.moneybox.util.DateUtil.getCurrentDate;
+import static com.example.moneybox.util.DateUtil.getTodayDate;
 
 public class PlanSetActivity extends AppCompatActivity {
 

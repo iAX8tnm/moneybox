@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 
 import static android.content.Context.MODE_PRIVATE;
-import static com.example.moneybox.parseData.getCurrentDate;
-import static com.example.moneybox.parseData.getTime;
-import static com.example.moneybox.parseData.getTodayDate;
+import static com.example.moneybox.util.DateUtil.getCurrentDate;
+import static com.example.moneybox.util.DateUtil.getTime;
+import static com.example.moneybox.util.DateUtil.getTodayDate;
 import static java.security.AccessController.getContext;
 
 
