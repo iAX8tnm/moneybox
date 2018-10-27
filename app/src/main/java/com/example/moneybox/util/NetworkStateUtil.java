@@ -1,4 +1,4 @@
-package com.example.moneybox;
+package com.example.moneybox.util;
 
 import android.content.Context;
 import android.net.wifi.WifiInfo;
