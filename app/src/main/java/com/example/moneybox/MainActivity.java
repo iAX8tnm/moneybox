@@ -23,11 +23,16 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import static com.example.moneybox.MainActivity.fileIsExists;
 import static com.example.moneybox.parseData.getCurrentDate;
@@ -48,8 +53,10 @@ public class MainActivity extends AppCompatActivity
     int TotalVal = 0;
     int PlanGoal = 0;
     int hasNewData = 0;
-    boolean hasNeverConnectedToService = true;
-    ScheduledExecutorService mReceiveMsgThreadPool = Executors.newScheduledThreadPool(1);
+    ScheduledExecutorService mUpdateDataThreadPool = Executors.newScheduledThreadPool(1);
+
+
+    OkHttpClient client = new OkHttpClient();
 
 
     @Override
@@ -65,19 +72,9 @@ public class MainActivity extends AppCompatActivity
             lastRequestDate = pref.getString("LastRequestDate", "2018-1-1 00:00:00");
             TotalVal = pref.getInt("TotalVal", 0);
         }
-        else Log.d(TAG, "onCreate: SQL is not exit! get data from Internet");
-        /*if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\"")) {
+        else Log.d(TAG, "onCreate: SQL is not exit! get new data from LEWEI50 from start time" + lastRequestDate);
 
-            Log.d(TAG, "onCreate: Connected to WIFI \"MONEY\" start to connect server");
-            socket = SocketClient.getInstance();
-            hasNeverConnectedToService = false;
-
-        } else {*/
-
-            Log.d(TAG, "onCreate: WIFI \"MONEY\" is not connected! get new data from LEWEI50 from start time " + lastRequestDate);
-
-            getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
-        //}
+        getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
 
 
         //后期计划添加splash启动页面
@@ -104,41 +101,12 @@ public class MainActivity extends AppCompatActivity
         recyclerView.setLayoutManager(linearLayoutManager);
         recyclerView.setAdapter(adapter);
 
-        //if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\""))
-        //    startReceiveMsgThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
 
-        //下面是检查wifi状态改变的线程池
-        /*ScheduledExecutorService mCheckWIFIStateThreadPool = Executors.newScheduledThreadPool(1);
-        mCheckWIFIStateThreadPool.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                if (!NetworkStateUtil.getWifiSSID(MainActivity.this).equals("\"MONEY\"")) {
-                    //Log.d(TAG, "run: no MONEY wifi");
-
-                    if (socket != null) {   //假如是连接过这个WIFI但是现在断了的话，关闭socket
-                        socket.disconnectSocketServer();
-                        socket = null;
-
-                        //更新toolbar
-                        invalidateOptionsMenu();
-                    }
-                }else {
-                    //Log.d(TAG, "run: connected to MONEY !!!");
-                    invalidateOptionsMenu();
-                }
-            }
-        }, 0, 2, TimeUnit.SECONDS);*/
-
+        //startUpdateDataThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
 
         Log.d(TAG, "onCreate: execute");
     }
 
-    @Override
-    protected void onStart() {
-
-        //Log.d(TAG, "onStart: executed! " + PlanGoal);
-        super.onStart();
-    }
 
     @Override
     protected void onRestart() {
@@ -178,15 +146,6 @@ public class MainActivity extends AppCompatActivity
         super.onRestart();
     }
 
-    @Override
-    protected void onDestroy() {
-        if (socket != null)
-            if (socket.getIsConnected())
-                socket.disconnectSocketServer();
-        super.onDestroy();
-    }
-
-
 
     @Override
     public void onBackPressed() {
@@ -204,37 +163,44 @@ public class MainActivity extends AppCompatActivity
         return super.onCreateOptionsMenu(menu);
     }
 
+    /**
+     * 把它改成一个显示手机是否联网的把
+     * @param menu 待初始化的menu item
+     * @return 完成为真
+     */
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         if (socket != null) {
-            //Log.d(TAG, "onPrepareOptionsMenu: socket != null");
             if (socket.getIsConnected()) {
-                //Log.d(TAG, "onPrepareOptionsMenu: SOCKET.isConnected() ");
                 menu.findItem(R.id.item_main_is_connect).setIcon(R.drawable.ic_connected);
             }
         }else {
-            //Log.d(TAG, "onPrepareOptionsMenu: socket == null");
             menu.findItem(R.id.item_main_is_connect).setIcon(R.drawable.ic_disconnect);
         }
 
         return super.onPrepareOptionsMenu(menu);
     }
 
+    /**
+     * 这里用来判断，右上角太阳
+     * @param item
+     * @return
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.item_main_is_connect: {
-                if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\"")) {
+            case R.id.item_main_is_connect: {//这是那个太阳
+                /*if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\"")) {
 
                     //if (socket == null) {
                         Log.d(TAG, "onCreate: Connected to WIFI \"MONEY\" start to connect server");
                         socket = SocketClient.getInstance();
                         if (hasNeverConnectedToService) {
-                            startReceiveMsgThreadPool();
+                            startUpdateDataThreadPool();
                             hasNeverConnectedToService = false;
                         }
                     //}
-                }
+                }*/
 
                 return true;
             }
@@ -275,57 +241,58 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    public void startReceiveMsgThreadPool() {
-        if (socket != null) {
-            if (socket.getIsConnected()) {
+    /**
+     * 开启定时查看有没有新数据的线程池
+     */
+    public void startUpdateDataThreadPool() {
+
+        SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
+        PlanGoal = pref.getInt("PlanGoal", 0);
+        //socket.sendMessage("GOAL:"+PlanGoal);   //
+        //Toast.makeText(this, "connected true", Toast.LENGTH_SHORT).show();
+
+        Log.d(TAG, "onCreate: starting ScheduledExecutorService. update data every 2 Seconds");
+
+        mUpdateDataThreadPool.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                /*String response = socket.receiveMessage();
+                if (response != null) {
+                    storeESP8266Data(response);
+                }
 
                 SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
                 PlanGoal = pref.getInt("PlanGoal", 0);
-                //socket.sendMessage("GOAL:"+PlanGoal);   //
-                //Toast.makeText(this, "connected true", Toast.LENGTH_SHORT).show();
+                int count = 1;
+                int TmpPlanGoal = PlanGoal;
 
-                Log.d(TAG, "onCreate: starting ScheduledExecutorService. Execute socket.receiveMessage() every 2 Seconds");
+                while((TmpPlanGoal /= 10) > 0) {
+                    count++;
+                }
+                String TmpGoal = Integer.toString(PlanGoal);
+                for (int i = 0; i < (7-count); i++)
+                    TmpGoal += "\n";
+                //socket.sendMessage(TmpGoal + "GOAL");
 
-                mReceiveMsgThreadPool.scheduleWithFixedDelay(new Runnable() {
-                    @Override
-                    public void run() {
-                        String response = socket.receiveMessage();
-                        if (response != null) {
-                            storeESP8266Data(response);
-                        }
-
-                        SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-                        PlanGoal = pref.getInt("PlanGoal", 0);
-                        int count = 1;
-                        int TmpPlanGoal = PlanGoal;
-
-                        while((TmpPlanGoal /= 10) > 0) {
-                            count++;
-                        }
-                        String TmpGoal = Integer.toString(PlanGoal);
-                        for (int i = 0; i < (7-count); i++)
-                            TmpGoal += "\n";
-                        //socket.sendMessage(TmpGoal + "GOAL");
-
-                        TotalVal = pref.getInt("TotalVal", 0);
-                        count = 1;
-                        int TmpTotalVal = TotalVal;
-                        while((TmpTotalVal /= 10) > 0) {
-                            count++;
-                        }
-                        String TmpVal = Integer.toString(TotalVal);
-                        for (int i = 0; i < (7-count); i++)
-                            TmpVal += "\n";
-                        socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");
-                    }
-                }, 0, 2, TimeUnit.SECONDS);
+                TotalVal = pref.getInt("TotalVal", 0);
+                count = 1;
+                int TmpTotalVal = TotalVal;
+                while((TmpTotalVal /= 10) > 0) {
+                    count++;
+                }
+                String TmpVal = Integer.toString(TotalVal);
+                for (int i = 0; i < (7-count); i++)
+                    TmpVal += "\n";
+                socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");*/
             }
-        }
+        }, 0, 2, TimeUnit.SECONDS);
     }
+
+
 
     /**
      * 从乐联网(LEWEI50)获取数据，发送Http Request时加上请求数据的开始日期以及截止日期，并添加userkey的property
-     *
+     * @param startTime 获取从上一次请求后的那天（startTime）开始,到今天的数据
      */
     public void getDataFromLEWEI50(String startTime) {
         //乐联网的连接地址
@@ -333,33 +300,38 @@ public class MainActivity extends AppCompatActivity
         //乐联网的用户键值
         final String userkey = "6409dc66bbaf4c7592dc7e30d2337311";
 
-        //网络请求数据
-        HttpUtil.sendHttpRequest(url_getHistoryData +
-                                         "?StartTime=" + startTime +
-                                         "&EndTime=" + getTomorrowDate(),
-                                          userkey, new HttpCallbackListener() {
-            @Override
-            public void onFinish(String response) {
+        final Request request = new Request.Builder()
+                .url(url_getHistoryData + "?StartTime=" + startTime + "&EndTime=" + getTomorrowDate())
+                .addHeader("userkey", userkey)
+                .build();
 
-                Log.d(TAG, "onFinish: get new data from LEWEI50 finish. ");
-                parseDataFromJSON(response);    //解析返回的json文件
-               // adapter.notifyDataSetChanged();  //更新RecyclerView
-
-                //把数据存入数据库中
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        storeLEWEI50Data();
-                    }
-                }).start();
-            }
+        new Thread(new Runnable() {
             @Override
-            public void onError(Exception e) {
-                Log.d(TAG, "onError: I get an Error at method getDataFromLEWEI50()");
+            public void run() {
+                try {
+                    Response response = client.newCall(request).execute();
+                    String r = response.body().string();
+                    Log.d(TAG, "onFinish: get new data from LEWEI50 finish. ");
+                    parseDataFromJSON(r);    //解析返回的json文件
+                    // adapter.notifyDataSetChanged();  //更新RecyclerView
+
+                    //把数据存入数据库中
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            storeLEWEI50Data();
+                        }
+                    }).start();
+
+                }catch (Exception e) {
+                    Log.d(TAG, "onError: I get an Error at method getDataFromLEWEI50()");
+                    e.printStackTrace();
+                }
             }
-        });
+        }).start();
+
+
     }
-
 
 
 
