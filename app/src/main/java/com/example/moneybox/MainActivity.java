@@ -35,10 +35,10 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import static com.example.moneybox.MainActivity.fileIsExists;
-import static com.example.moneybox.parseData.getCurrentDate;
-import static com.example.moneybox.parseData.getTime;
-import static com.example.moneybox.parseData.getTodayDate;
-import static com.example.moneybox.parseData.getTomorrowDate;
+import static com.example.moneybox.util.DateUtil.getCurrentDate;
+import static com.example.moneybox.util.DateUtil.getTime;
+import static com.example.moneybox.util.DateUtil.getTodayDate;
+import static com.example.moneybox.util.DateUtil.getTomorrowDate;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -103,6 +103,7 @@ public class MainActivity extends AppCompatActivity
 
 
         //startUpdateDataThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
+        //TODO:除了定时UpdateData的线程池，还需要一个普通的线程池执行一般任务
 
         Log.d(TAG, "onCreate: execute");
     }
@@ -387,8 +388,8 @@ public class MainActivity extends AppCompatActivity
                 String updateTime = jsonObject.getString("updateTime");
                 String value = jsonObject.getString("value");
 
-                Log.d(TAG, "parseDataFromJSON: updateTime is " + updateTime);
-                Log.d(TAG, "parseDataFromJSON: value is " +value);
+                //Log.d(TAG, "parseDataFromJSON: updateTime is " + updateTime);
+                //Log.d(TAG, "parseDataFromJSON: value is " +value);
                 if (!updateTime.equals(lastUpdateTime)) {
                     hasNewData++;
                     if (i == (jsonArray.length()-1)) {
@@ -431,7 +432,7 @@ public class MainActivity extends AppCompatActivity
                     values.put("updateDate", saveMoneyList.get(i).getUpdateDate());
                     values.put("updateTime", saveMoneyList.get(i).getUpdateTime());
                     values.put("value", saveMoneyList.get(i).getValue());
-                    Log.d(TAG, "run: .... "+saveMoneyList.get(i).getUpdateDate()+" "+saveMoneyList.get(i).getUpdateTime()+" "+saveMoneyList.get(i).getValue());
+                    //Log.d(TAG, "run: .... "+saveMoneyList.get(i).getUpdateDate()+" "+saveMoneyList.get(i).getUpdateTime()+" "+saveMoneyList.get(i).getValue());
                     db.insert("Deposit", null, values);
                     values.clear();
                     hasNewData--;
@@ -469,7 +470,7 @@ public class MainActivity extends AppCompatActivity
                     break;
                 else {
 
-                    Log.d(TAG, "run: saving data to DailyDeposit " + saveMoneyList.get(i).getUpdateDate() + " " + saveMoneyList.get(i).getValue());
+                    //Log.d(TAG, "run: saving data to DailyDeposit " + saveMoneyList.get(i).getUpdateDate() + " " + saveMoneyList.get(i).getValue());
                     if (TmpDate.equals(saveMoneyList.get(i).getUpdateDate())) {
                         TmpVal = TmpVal + saveMoneyList.get(i).getValue();
                     }
