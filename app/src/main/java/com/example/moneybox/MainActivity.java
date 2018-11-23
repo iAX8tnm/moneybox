@@ -18,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -72,9 +73,9 @@ public class MainActivity extends AppCompatActivity
             lastRequestDate = pref.getString("LastRequestDate", "2018-1-1 00:00:00");
             TotalVal = pref.getInt("TotalVal", 0);
         }
-        else Log.d(TAG, "onCreate: SQL is not exit! get new data from LEWEI50 from start time" + lastRequestDate);
+        else Log.d(TAG, "onCreate: SQL is not exit!");
 
-        getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
+        //getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
 
 
         //后期计划添加splash启动页面
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity
         recyclerView.setAdapter(adapter);
 
 
-        //startUpdateDataThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
+        startUpdateDataThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
         //TODO:除了定时UpdateData的线程池，还需要一个普通的线程池执行一般任务
 
         Log.d(TAG, "onCreate: execute");
@@ -112,6 +113,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onRestart() {
         SharedPreferences pref  = getSharedPreferences("data", MODE_PRIVATE);
+        //FIXME:这个hasWithdrawMoney好像没有用到。。。。。。。。
         boolean hasWithdrawMoney = pref.getBoolean("hasWithdrawMoney", false);
         if (hasWithdrawMoney) {
             hasWithdrawMoney = false;
@@ -134,11 +136,14 @@ public class MainActivity extends AppCompatActivity
             }
 
             TotalVal = pref.getInt("TotalVal", 0);
+            lastRequestDate = pref.getString("LastRequestDate", "2018-1-1 00:00:00");
+
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     CollapsingToolbarLayout mCollapsingToolbarLayout = findViewById(R.id.toolbar_layout);
                     mCollapsingToolbarLayout.setTitle(TotalVal + "元");
+
                     adapter.notifyDataSetChanged();
                 }
             });
@@ -191,17 +196,7 @@ public class MainActivity extends AppCompatActivity
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.item_main_is_connect: {//这是那个太阳
-                /*if (NetworkStateUtil.getWifiSSID(this).equals("\"MONEY\"")) {
 
-                    //if (socket == null) {
-                        Log.d(TAG, "onCreate: Connected to WIFI \"MONEY\" start to connect server");
-                        socket = SocketClient.getInstance();
-                        if (hasNeverConnectedToService) {
-                            startUpdateDataThreadPool();
-                            hasNeverConnectedToService = false;
-                        }
-                    //}
-                }*/
 
                 return true;
             }
@@ -249,44 +244,19 @@ public class MainActivity extends AppCompatActivity
 
         SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
         PlanGoal = pref.getInt("PlanGoal", 0);
-        //socket.sendMessage("GOAL:"+PlanGoal);   //
-        //Toast.makeText(this, "connected true", Toast.LENGTH_SHORT).show();
 
-        Log.d(TAG, "onCreate: starting ScheduledExecutorService. update data every 2 Seconds");
+
+        Log.d(TAG, "onCreate: starting ScheduledExecutorService. update data every 5 Seconds");
 
         mUpdateDataThreadPool.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                /*String response = socket.receiveMessage();
-                if (response != null) {
-                    storeESP8266Data(response);
-                }
+                Log.d(TAG, "run: startttttttttttttttttttt time" + lastRequestDate);
+                getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
+                Log.d(TAG, "run: endddddddddddddddddddddddddddddddddddddddddddddddddddd");
 
-                SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-                PlanGoal = pref.getInt("PlanGoal", 0);
-                int count = 1;
-                int TmpPlanGoal = PlanGoal;
-
-                while((TmpPlanGoal /= 10) > 0) {
-                    count++;
-                }
-                String TmpGoal = Integer.toString(PlanGoal);
-                for (int i = 0; i < (7-count); i++)
-                    TmpGoal += "\n";
-                //socket.sendMessage(TmpGoal + "GOAL");
-
-                TotalVal = pref.getInt("TotalVal", 0);
-                count = 1;
-                int TmpTotalVal = TotalVal;
-                while((TmpTotalVal /= 10) > 0) {
-                    count++;
-                }
-                String TmpVal = Integer.toString(TotalVal);
-                for (int i = 0; i < (7-count); i++)
-                    TmpVal += "\n";
-                socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");*/
             }
-        }, 0, 2, TimeUnit.SECONDS);
+        }, 0, 5, TimeUnit.SECONDS);
     }
 
 
@@ -306,62 +276,20 @@ public class MainActivity extends AppCompatActivity
                 .addHeader("userkey", userkey)
                 .build();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Response response = client.newCall(request).execute();
-                    String r = response.body().string();
-                    Log.d(TAG, "onFinish: get new data from LEWEI50 finish. ");
-                    parseDataFromJSON(r);    //解析返回的json文件
-                    // adapter.notifyDataSetChanged();  //更新RecyclerView
-
-                    //把数据存入数据库中
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            storeLEWEI50Data();
-                        }
-                    }).start();
-
-                }catch (Exception e) {
-                    Log.d(TAG, "onError: I get an Error at method getDataFromLEWEI50()");
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
-
-    }
-
-
-
-
-    /**
-     * 从手机本地提取数据
-     */
-    public void getDataFromDatabase() {
         try {
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
-            Cursor cursor = db.query("Deposit",null, null, null, null, null, null);
-            if (cursor.moveToLast()) {
-                do {
-                    String updateDate = cursor.getString(cursor.getColumnIndex("updateDate"));
-                    String updateTime = cursor.getString(cursor.getColumnIndex("updateTime"));
-                    int value = cursor.getInt(cursor.getColumnIndex("value"));
-                    //然后填充saveMoneyList
-                    SaveMoney saveMoney = new SaveMoney();
-                    saveMoney.setUpdateDate(updateDate);
-                    saveMoney.setUpdateTime(updateTime);
-                    saveMoney.setValue(value);
-                    saveMoneyList.add(saveMoney);
-                } while (cursor.moveToPrevious());
-            }
-            cursor.close();
-            adapter.notifyDataSetChanged();  //更新RecyclerView
-        } catch (Exception e) {
+            Response response = client.newCall(request).execute();
+            String r = response.body().string();
+            Log.d(TAG, "onFinish: request new data from LEWEI50.com finish. ");
+
+            parseDataFromJSON(r);    //解析返回的json文件
+            // adapter.notifyDataSetChanged();  //更新RecyclerView
+
+            //把数据存入数据库中
+            storeLEWEI50Data();
+
+        }catch (Exception e) {
+            Log.d(TAG, "onError: I get an Error at method getDataFromLEWEI50()");
             e.printStackTrace();
-            Log.d(TAG, "getDataFromDatabase: I get an Error at method getDataFromDatabase()");
         }
 
     }
@@ -378,25 +306,27 @@ public class MainActivity extends AppCompatActivity
 
         SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
         String lastUpdateTime = pref.getString("LastRequestDate", getCurrentDate());
+        hasNewData = 0;
         try {
 
             JSONArray jsonArray = new JSONArray(jsonData);
             int index = 0;
-            for (int i = jsonArray.length()-1; i >= 0; i--) {
+            int N = jsonArray.length();
+            for (int i = N-1; i >= 0; i--) {
 
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
                 String updateTime = jsonObject.getString("updateTime");
                 String value = jsonObject.getString("value");
 
-                //Log.d(TAG, "parseDataFromJSON: updateTime is " + updateTime);
-                //Log.d(TAG, "parseDataFromJSON: value is " +value);
+                Log.d(TAG, "updateTime is " + updateTime + "lastRequestDate is " + lastRequestDate);
                 if (!updateTime.equals(lastUpdateTime)) {
                     hasNewData++;
-                    if (i == (jsonArray.length()-1)) {
+                    if (i == (N-1)) {
                         SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
                         editor.putString("LastRequestDate", updateTime);   //储存的上次更新的日期，方便下一次启动时从新的日期开始获取获取数据
                         Log.d(TAG, "run: LastRequestDate " + updateTime + " is saved at SharedPreferences data.xml");
                         editor.apply();
+                        lastRequestDate = updateTime;
                     }
                     //Log.d(TAG, "parseDataFromJSON: " + updateTime);
 
@@ -407,7 +337,10 @@ public class MainActivity extends AppCompatActivity
 
                     saveMoneyList.add(index, saveMoney);
                     index++;
-                } else break;
+                } else {
+                    Log.d(TAG, "parseDataFromJSON: no new data............................");
+                    break;
+                }
             }
             //adapter.notifyDataSetChanged();  //更新RecyclerView
         } catch(Exception e) {
@@ -443,18 +376,20 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "storeLEWEI50Data: Already save all new data to Deposit.db");
 
             SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
-            SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-            int lastTotalVal = pref.getInt("TotalVal", 0);
-            TotalVal = TmpVal + lastTotalVal;
+            //SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
+            //int lastTotalVal = pref.getInt("TotalVal", 0);
+            TotalVal = TmpVal + TotalVal;
             editor.putInt("TotalVal", TotalVal);   //储存总金额，方便下一次启动时显示
             editor.apply();
-            Log.d(TAG, "run: TotalVal " + TotalVal +" is saved at SharedPreferences data.xml");
+
+            //Log.d(TAG, "run: TotalVal " + TotalVal +" is saved at SharedPreferences data.xml");
 
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {                                        //更新UI
                     CollapsingToolbarLayout mCollapsingToolbarLayout = findViewById(R.id.toolbar_layout);
                     mCollapsingToolbarLayout.setTitle(TotalVal + "元");
+
                     adapter.notifyDataSetChanged();
                 }
             });
@@ -532,78 +467,33 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void storeESP8266Data(String response) {
-        if (response != null) {
-
-            SaveMoney saveMoney = new SaveMoney();
-            saveMoney.setUpdateDate(getTodayDate());
-            saveMoney.setUpdateTime(getTime());
-            saveMoney.setValue(response.substring(response.indexOf("\"value\":")+8, response.indexOf("}]")));   //获取value
-            Log.d(TAG, "run: test "+response.substring(response.indexOf("\"value\":")+8, response.indexOf("}]")));
-            saveMoneyList.add(0, saveMoney);
-
-
-            //先把数据存向数据库的Deposit表
+    /**
+     * 从手机本地提取数据
+     */
+    public void getDataFromDatabase() {
+        try {
             SQLiteDatabase db = dbHelper.getWritableDatabase();
-            ContentValues values = new ContentValues();
-            values.put("updateDate", saveMoney.getUpdateDate());
-            values.put("updateTime", saveMoney.getUpdateTime());
-            values.put("value", saveMoney.getValue());
-            db.insert("Deposit", null, values);
-            values.clear();
-            Log.d(TAG, "storeESP8266Data: Already save new data to Deposit Table");
-
-            //更新数据TotalVal到SharedPreference
-            SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
-            SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-            int lastTotalVal = pref.getInt("TotalVal", 0);
-            TotalVal = saveMoney.getValue() + lastTotalVal;
-            editor.putInt("TotalVal", TotalVal);   //储存总金额，方便下一次启动时显示
-            editor.apply();
-            Log.d(TAG, "run: TotalVal " + TotalVal +" is saved at SharedPreferences data.xml");
-
-            //更新UI
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    CollapsingToolbarLayout mCollapsingToolbarLayout = findViewById(R.id.toolbar_layout);
-                    mCollapsingToolbarLayout.setTitle(TotalVal + "元");
-                    adapter.notifyDataSetChanged();
-                }
-            });
-
-
-            //存入数据库的DailyDeposit表中
-            Cursor cursor = db.query("DailyDeposit", null, null, null, null, null, null);
+            Cursor cursor = db.query("Deposit",null, null, null, null, null, null);
             if (cursor.moveToLast()) {
-                String lastDate = cursor.getString(cursor.getColumnIndex("updateDate"));
-                Log.d(TAG, "storeESP8266Data:  " + saveMoney.getUpdateDate() + "  " + lastDate);
-                if (saveMoney.getUpdateDate().equals(lastDate)) {
-                    //
-                    int lastValue = cursor.getInt(cursor.getColumnIndex("value"));
-                    values.put("value", (saveMoney.getValue() + lastValue));
-                    db.update("DailyDeposit", values, "updateDate=?", new String[]{lastDate} );
-                    values.clear();
-                    Log.d(TAG, "storeESP8266Data: Already save new data to DailyDeposit Table");
-                } else {
-                    values.put("updateDate", saveMoney.getUpdateDate());
-                    values.put("value", saveMoney.getValue());
-                    db.insert("DailyDeposit", null, values);
-                    values.clear();
-                    Log.d(TAG, "storeESP8266Data: Already save new data to DailyDeposit Table");
-                }
-            } else {
-                values.put("updateDate", saveMoney.getUpdateDate());
-                values.put("value", saveMoney.getValue());
-                db.insert("DailyDeposit", null, values);
-                values.clear();
-                Log.d(TAG, "storeESP8266Data: Already save new data to DailyDeposit Table");
+                do {
+                    String updateDate = cursor.getString(cursor.getColumnIndex("updateDate"));
+                    String updateTime = cursor.getString(cursor.getColumnIndex("updateTime"));
+                    int value = cursor.getInt(cursor.getColumnIndex("value"));
+                    //然后填充saveMoneyList
+                    SaveMoney saveMoney = new SaveMoney();
+                    saveMoney.setUpdateDate(updateDate);
+                    saveMoney.setUpdateTime(updateTime);
+                    saveMoney.setValue(value);
+                    saveMoneyList.add(saveMoney);
+                } while (cursor.moveToPrevious());
             }
             cursor.close();
-
-
-
+            adapter.notifyDataSetChanged();  //更新RecyclerView
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d(TAG, "getDataFromDatabase: I get an Error at method getDataFromDatabase()");
         }
+
     }
 
     /**
