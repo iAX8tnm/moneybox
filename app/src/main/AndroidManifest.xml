@@ -32,10 +32,9 @@
         <activity
             android:name=".UnlockActivity"
             android:launchMode="singleTop" />
-        <activity android:name=".AboutActivity" />
         <activity
-            android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings" />
+            android:name=".AboutActivity"
+            android:launchMode="singleTop" />
         <activity
             android:name=".PlanActivity"
             android:launchMode="singleTop" />
