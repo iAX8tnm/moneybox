@@ -25,7 +25,7 @@ import static com.example.moneybox.util.DateUtil.getTodayDate;
 
 public class UnlockActivity extends AppCompatActivity {
 
-    SocketClient socket = SocketClient.getInstance();
+    //SocketClient socket = SocketClient.getInstance();
     private mDatabaseHelper dbHelper = new mDatabaseHelper(this, "Deposit.db", null, 2);
     private String password;
     boolean isPassWordCorrect = false;
@@ -50,9 +50,9 @@ public class UnlockActivity extends AppCompatActivity {
         button.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (socket != null)
+                /*if (socket != null)//TODO：这个是长按的后门
                     if (socket.getIsConnected())
-                        socket.sendMessage("UNLOCK");
+                        socket.sendMessage("UNLOCK");*/
                 return true;
             }
         });
@@ -96,7 +96,7 @@ public class UnlockActivity extends AppCompatActivity {
     }
 
     public void unlock(View view) {
-        if (isSettingPassword) {
+        if (isSettingPassword) {                                        //设置密码
             EditText editPassword = findViewById(R.id.et_password);
             EditText editNewPassword = findViewById(R.id.et_new_password);
             Button btnSetNewPassword = findViewById(R.id.btn_unlock);
@@ -117,7 +117,7 @@ public class UnlockActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(UnlockActivity.this, "密码输入错误", Toast.LENGTH_SHORT).show();
             }
-        } else {
+        } else {                                                        //真的在开锁
             sendPassword();
             if (isPassWordCorrect) {
                 isPassWordCorrect = false;
@@ -193,7 +193,7 @@ public class UnlockActivity extends AppCompatActivity {
                                 String TmpVal = Integer.toString(TotalVal);
                                 for (int i = 0; i < (7-count); i++)
                                     TmpVal += "\n";
-                                socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");
+                                //socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");//TODO
 
 
 
@@ -254,9 +254,9 @@ public class UnlockActivity extends AppCompatActivity {
         if (password.equals(this.password)) {
             Log.d(TAG, "sendPassword: password correct!");
             isPassWordCorrect = true;
-            if (socket != null)
+            /*if (socket != null)
                 if (socket.getIsConnected())
-                    socket.sendMessage("UNLOCK");
+                    socket.sendMessage("UNLOCK");*/
         } else {
             isPassWordCorrect = false;
             editText.setText("");

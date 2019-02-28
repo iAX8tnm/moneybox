@@ -18,8 +18,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -49,16 +48,14 @@ public class MainActivity extends AppCompatActivity
     List<SaveMoney> saveMoneyList = new ArrayList<>();
     private mDatabaseHelper dbHelper = new mDatabaseHelper(MainActivity.this, "Deposit.db", null, 2);
     saveMoneyAdapter adapter = new saveMoneyAdapter(saveMoneyList);
-    SocketClient socket = null;
-    String lastRequestDate = "2018-1-1 00:00:00";
+    String lastRequestDate = "2019-1-1 00:00:00";
     int TotalVal = 0;
     int PlanGoal = 0;
     int hasNewData = 0;
     ScheduledExecutorService mUpdateDataThreadPool = Executors.newScheduledThreadPool(1);
 
-
-    OkHttpClient client = new OkHttpClient();
-
+    OkSingleton client = OkSingleton.getInstance();
+    ExecutorService taskThreadPool = ThreadPoolSingleton.getThreadPool();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,12 +67,12 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "onCreate: SQL exit! get data from database");
             getDataFromDatabase();
             SharedPreferences pref  = getSharedPreferences("data", MODE_PRIVATE);
-            lastRequestDate = pref.getString("LastRequestDate", "2018-1-1 00:00:00");
+            lastRequestDate = pref.getString("LastRequestDate", "2019-1-1 00:00:00");
             TotalVal = pref.getInt("TotalVal", 0);
         }
         else Log.d(TAG, "onCreate: SQL is not exit!");
 
-        //getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
+        //getDataFromLW5(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
 
 
         //后期计划添加splash启动页面
@@ -103,7 +100,7 @@ public class MainActivity extends AppCompatActivity
         recyclerView.setAdapter(adapter);
 
 
-        startUpdateDataThreadPool();   //里面会判断有没有socket连接，再开启接受线程池
+        startUpdateDataThreadPool();   //开启接收数据线程池
         //TODO:除了定时UpdateData的线程池，还需要一个普通的线程池执行一般任务
 
         Log.d(TAG, "onCreate: execute");
@@ -111,7 +108,15 @@ public class MainActivity extends AppCompatActivity
 
 
     @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop: stopppppppp");
+        //暂停定时任务
+        super.onStop();
+    }
+
+    @Override
     protected void onRestart() {
+        //重启定时任务
         SharedPreferences pref  = getSharedPreferences("data", MODE_PRIVATE);
         //FIXME:这个hasWithdrawMoney好像没有用到。。。。。。。。
         boolean hasWithdrawMoney = pref.getBoolean("hasWithdrawMoney", false);
@@ -136,7 +141,7 @@ public class MainActivity extends AppCompatActivity
             }
 
             TotalVal = pref.getInt("TotalVal", 0);
-            lastRequestDate = pref.getString("LastRequestDate", "2018-1-1 00:00:00");
+            lastRequestDate = pref.getString("LastRequestDate", "2019-1-1 00:00:00");
 
             runOnUiThread(new Runnable() {
                 @Override
@@ -176,13 +181,9 @@ public class MainActivity extends AppCompatActivity
      */
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        if (socket != null) {
-            if (socket.getIsConnected()) {
-                menu.findItem(R.id.item_main_is_connect).setIcon(R.drawable.ic_connected);
-            }
-        }else {
-            menu.findItem(R.id.item_main_is_connect).setIcon(R.drawable.ic_disconnect);
-        }
+
+        menu.findItem(R.id.item_main_is_connect).setIcon(R.drawable.ic_disconnect);
+
 
         return super.onPrepareOptionsMenu(menu);
     }
@@ -210,7 +211,7 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        /*if (id == R.id.nav_chart) {
+        if (id == R.id.nav_chart) {
             Intent intent = new Intent(this, ChartActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_plan) {
@@ -229,7 +230,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_about) {
             Intent intent = new Intent(this, AboutActivity.class);
             startActivity(intent);
-        }*/
+        }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -246,17 +247,17 @@ public class MainActivity extends AppCompatActivity
         PlanGoal = pref.getInt("PlanGoal", 0);
 
 
-        Log.d(TAG, "onCreate: starting ScheduledExecutorService. update data every 5 Seconds");
+        Log.d(TAG, "onCreate: starting ScheduledExecutorService. update data every 3 Seconds");
 
         mUpdateDataThreadPool.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                Log.d(TAG, "run: startttttttttttttttttttt time" + lastRequestDate);
-                getDataFromLEWEI50(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
-                Log.d(TAG, "run: endddddddddddddddddddddddddddddddddddddddddddddddddddd");
+                Log.d(TAG, "run: start time: " + lastRequestDate + "............................");
+                getDataFromLW5(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
+                Log.d(TAG, "run: end.......................................................");
 
             }
-        }, 0, 5, TimeUnit.SECONDS);
+        }, 0, 3, TimeUnit.SECONDS);
     }
 
 
@@ -265,7 +266,7 @@ public class MainActivity extends AppCompatActivity
      * 从乐联网(LEWEI50)获取数据，发送Http Request时加上请求数据的开始日期以及截止日期，并添加userkey的property
      * @param startTime 获取从上一次请求后的那天（startTime）开始,到今天的数据
      */
-    public void getDataFromLEWEI50(String startTime) {
+    public void getDataFromLW5(String startTime) {
         //乐联网的连接地址
         final String url_getHistoryData = "http://www.lewei50.com/api/v1/sensor/gethistorydata/63012";
         //乐联网的用户键值
@@ -285,10 +286,10 @@ public class MainActivity extends AppCompatActivity
             // adapter.notifyDataSetChanged();  //更新RecyclerView
 
             //把数据存入数据库中
-            storeLEWEI50Data();
+            storeLW5Data();
 
         }catch (Exception e) {
-            Log.d(TAG, "onError: I get an Error at method getDataFromLEWEI50()");
+            Log.d(TAG, "onError: I get an Error at method getDataFromLW5()");
             e.printStackTrace();
         }
 
@@ -318,13 +319,13 @@ public class MainActivity extends AppCompatActivity
                 String updateTime = jsonObject.getString("updateTime");
                 String value = jsonObject.getString("value");
 
-                Log.d(TAG, "updateTime is " + updateTime + "lastRequestDate is " + lastRequestDate);
+                //Log.d(TAG, "updateTime is " + updateTime + "lastRequestDate is " + lastRequestDate);
                 if (!updateTime.equals(lastUpdateTime)) {
                     hasNewData++;
                     if (i == (N-1)) {
                         SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
                         editor.putString("LastRequestDate", updateTime);   //储存的上次更新的日期，方便下一次启动时从新的日期开始获取获取数据
-                        Log.d(TAG, "run: LastRequestDate " + updateTime + " is saved at SharedPreferences data.xml");
+                        Log.d(TAG, "LastRequestDate " + updateTime + " is saved at SharedPreferences data.xml");
                         editor.apply();
                         lastRequestDate = updateTime;
                     }
@@ -338,7 +339,7 @@ public class MainActivity extends AppCompatActivity
                     saveMoneyList.add(index, saveMoney);
                     index++;
                 } else {
-                    Log.d(TAG, "parseDataFromJSON: no new data............................");
+                    Log.d(TAG, "parseDataFromJSON: no new data");
                     break;
                 }
             }
@@ -350,11 +351,11 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    private void storeLEWEI50Data() {
+    private void storeLW5Data() {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
 
-        String TmpDate = "2018/1/1";
+        String TmpDate = "2019/1/1";
         int TmpVal = 0;
         int TmpHasNewData = hasNewData;
         if (hasNewData != 0) {
@@ -373,7 +374,7 @@ public class MainActivity extends AppCompatActivity
                     TmpVal = TmpVal + saveMoneyList.get(i).getValue();
                 }
             }
-            Log.d(TAG, "storeLEWEI50Data: Already save all new data to Deposit.db");
+            Log.d(TAG, "storeLW5Data: Already save all new data to Deposit.db");
 
             SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
             //SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
@@ -409,7 +410,7 @@ public class MainActivity extends AppCompatActivity
                     if (TmpDate.equals(saveMoneyList.get(i).getUpdateDate())) {
                         TmpVal = TmpVal + saveMoneyList.get(i).getValue();
                     }
-                    else if (TmpDate.equals("2018/1/1")) {    //获取第一个日期，应该为最新日期开始
+                    else if (TmpDate.equals("2019/1/1")) {    //获取第一个日期，应该为最新日期开始
                         TmpDate = saveMoneyList.get(i).getUpdateDate();
                         TmpVal = TmpVal + saveMoneyList.get(i).getValue();
                     }
@@ -429,7 +430,6 @@ public class MainActivity extends AppCompatActivity
             //因以上写法在历遍完之后，最后一个日期是没有存进数据库的，所以下面进行单独操作
             if (TmpHasNewData != 0) {
                 values.put("updateDate", TmpDate);
-                // Log.d(TAG, "run: 222222222222222222222 " + TmpDate);
                 values.put("value", TmpVal);
                 // SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
                 Cursor cursor = db.query("DailyDeposit",null, null, null, null, null, null);
@@ -456,11 +456,9 @@ public class MainActivity extends AppCompatActivity
                         //  editor.apply();
                     }
                 }
-
                 cursor.close();
                 values.clear();
                 Log.d(TAG, "onFinish: Already save all new data to DailyDeposit.db");
-
 
             }
 
@@ -513,9 +511,4 @@ public class MainActivity extends AppCompatActivity
         { return false; }
         return true;
     }
-
-
-
-
-
 }

@@ -15,17 +15,28 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Calendar;
+import java.util.concurrent.ExecutorService;
+
 
 import static com.example.moneybox.util.DateUtil.getCurrentDate;
 import static com.example.moneybox.util.DateUtil.getTodayDate;
 
 public class PlanSetActivity extends AppCompatActivity {
 
-    SocketClient socket = SocketClient.getInstance();
-    private String deadline = "2018/1/1";
+    private String deadline = "2019/1/1";
     private Boolean hasSetPlan = false;
     private static final String TAG = "PlanSetActivity";
+
+    ExecutorService taskThreadPool = ThreadPoolSingleton.getThreadPool();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,6 +89,11 @@ public class PlanSetActivity extends AppCompatActivity {
         super.onBackPressed();
     }
 
+
+    /**
+     * 日期选择
+     * @param view
+     */
     public void showDateDialogPick(View view) {
 
         Calendar calendar = Calendar.getInstance();
@@ -118,7 +134,19 @@ public class PlanSetActivity extends AppCompatActivity {
 
     }
 
+    private boolean isDateBefore(DatePicker tempView) {
+        Calendar mCalendar = Calendar.getInstance();
+        Calendar tempCalendar = Calendar.getInstance();
+        tempCalendar.set(tempView.getYear(), tempView.getMonth(),
+                tempView.getDayOfMonth(), 0, 0, 0);
+        return tempCalendar.after(mCalendar);
+    }
 
+
+    /**
+     * 点击保存按键，对所输入的计划进行检查及保存
+     * @param view
+     */
     public void savePlan(View view) {
         SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
         EditText et_goal = findViewById(R.id.et_plan_set_goal);
@@ -126,42 +154,25 @@ public class PlanSetActivity extends AppCompatActivity {
 
         //需要判断一下是不是真的有goal
         if (!et_goal.getText().toString().equals("")) {
-            int goal = Integer.parseInt(et_goal.getText().toString());
-            if (goal >= 1000000) {   //判断一下有没有超过一百万。。
+            final int planGoal = Integer.parseInt(et_goal.getText().toString());
+            if (planGoal >= 1000000) {   //判断一下有没有超过一百万。。
                 Toast.makeText(this, "安全起见，还是放到银行里吧(っ °Д °;)っ", Toast.LENGTH_SHORT).show();
             } else {
                 String remarks = et_remarks.getText().toString();
 
-                editor.putInt("PlanGoal", goal);
+                editor.putInt("PlanGoal", planGoal);
                 editor.putString("PlanDeadline", deadline);
                 editor.putString("PlanRemarks", remarks);
                 editor.putBoolean("hasSetPlan", true);
                 editor.apply();
 
-                //把存钱数据即刻更新到存钱宝中
-                SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-                int PlanGoal = pref.getInt("PlanGoal", 0);
-                int count = 1;
-                int TmpPlanGoal = PlanGoal;
-
-                while((TmpPlanGoal /= 10) > 0) {
-                    count++;
-                }
-                String TmpGoal = Integer.toString(PlanGoal);
-                for (int i = 0; i < (7-count); i++)
-                    TmpGoal += "\n";
-                //socket.sendMessage(TmpGoal + "GOAL");
-
-                int TotalVal = pref.getInt("TotalVal", 0);
-                count = 1;
-                int TmpTotalVal = TotalVal;
-                while((TmpTotalVal /= 10) > 0) {
-                    count++;
-                }
-                String TmpVal = Integer.toString(TotalVal);
-                for (int i = 0; i < (7-count); i++)
-                    TmpVal += "\n";
-                socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");
+                //上传计划数据到乐联网
+                taskThreadPool.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        updatePlanToLW5(planGoal);
+                    }
+                });
 
 
                 //跳转PlanActivity
@@ -169,13 +180,14 @@ public class PlanSetActivity extends AppCompatActivity {
                 startActivity(intent);
                 finish();
             }
-
-
         } else
             Toast.makeText(this, "请输入你的小目标", Toast.LENGTH_SHORT).show();
-
     }
 
+    /**
+     * 取消已输入的数据
+     * @param view
+     */
     public void cancelPlan(View view) {
 
         SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
@@ -198,12 +210,58 @@ public class PlanSetActivity extends AppCompatActivity {
 
     }
 
-    private boolean isDateBefore(DatePicker tempView) {
-        Calendar mCalendar = Calendar.getInstance();
-        Calendar tempCalendar = Calendar.getInstance();
-        tempCalendar.set(tempView.getYear(), tempView.getMonth(),
-                tempView.getDayOfMonth(), 0, 0, 0);
-        return tempCalendar.after(mCalendar);
+
+    /**
+     * 把设置的计划总数传到乐联网
+     * @param planGoal 计划的数目
+     */
+    private void updatePlanToLW5(int planGoal) {
+
+        String content = "[{\"Name\":\"T2\", \"Value\":\""+ planGoal + "\"}]";
+        HttpURLConnection connection = null;
+        BufferedReader reader = null;
+        Log.d(TAG, "updatePlanToLW5: " + content);
+
+        try {
+            URL url = new URL("http://www.lewei50.com/api/v1/gateway/updatesensors/02");
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("userkey", "6409dc66bbaf4c7592dc7e30d2337311");
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.connect();
+
+            OutputStream out = connection.getOutputStream();
+            out.write(content.getBytes());
+            out.flush();
+
+            InputStream in = connection.getInputStream();
+            reader = new BufferedReader(new InputStreamReader(in));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line=reader.readLine()) != null) {
+                response.append(line);
+            }
+            Log.d(TAG, "updatePlanToLW5:" + response.toString());
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+
     }
+
+
 
 }
