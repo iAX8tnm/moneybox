@@ -1,4 +1,4 @@
-package com.example.moneybox;
+package com.example.moneybox.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -11,7 +11,7 @@ import java.util.GregorianCalendar;
  *
  */
 
-public class parseData {
+public class DateUtil {
 
     public static String getTime() {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");

@@ -24,23 +24,17 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IAxisValueFormatter;
-import com.github.mikephil.charting.formatter.IFillFormatter;
-import com.github.mikephil.charting.interfaces.dataprovider.LineDataProvider;
-import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import android.os.Handler;
 
 
 import static com.example.moneybox.MainActivity.fileIsExists;
-import static com.example.moneybox.parseData.parseStringDateToMillis;
+import static com.example.moneybox.util.DateUtil.parseStringDateToMillis;
 
 
 public class ChartActivity extends AppCompatActivity {
@@ -57,7 +51,7 @@ public class ChartActivity extends AppCompatActivity {
     private mDatabaseHelper dbHelper = new mDatabaseHelper(this, "Deposit.db", null, 2);
 
     private static final int TIME = 3500;
-    private Handler mHandler = new Handler();
+    private Handler handler = new Handler();
     private static final String TAG = "ChartActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,8 +63,6 @@ public class ChartActivity extends AppCompatActivity {
             initChartView();
         }
 
-        //mchart.invalidate(); // refresh
-
 
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -79,10 +71,9 @@ public class ChartActivity extends AppCompatActivity {
         }
 
 
-
         initViewPager();
 
-        mHandler.postDelayed(runnableForViewPager, TIME);
+        handler.postDelayed(runnableForViewPager, TIME);
 
         Log.d(TAG, "onCreate: execute");
     }
@@ -97,6 +88,11 @@ public class ChartActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop: stoppppppppppppp");
+        super.onStop();
+    }
 
     /**
      * Init Viewpager
@@ -123,7 +119,7 @@ public class ChartActivity extends AppCompatActivity {
         viewList.add(view3);
 
 
-        //mHandler = new Handler();
+        //handler = new Handler();
         mViewPagerAdapter viewPagerAdapter = new mViewPagerAdapter(viewList);
         viewPager.setAdapter(viewPagerAdapter);
         viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
@@ -134,7 +130,7 @@ public class ChartActivity extends AppCompatActivity {
 
             @Override
             public void onPageSelected(final int position) {
-                mHandler.postDelayed(new Runnable() {
+                handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         if (position == 4) {
@@ -159,7 +155,7 @@ public class ChartActivity extends AppCompatActivity {
         public void run() {
             try {
                 itemPosition++;
-                mHandler.postDelayed(this, TIME);
+                handler.postDelayed(this, TIME);
                 viewPager.setCurrentItem(itemPosition % mCount);
             } catch (Exception e) {
                 e.printStackTrace();

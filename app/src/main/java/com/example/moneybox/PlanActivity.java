@@ -21,7 +21,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.moneybox.parseData.getTodayDate;
+import static com.example.moneybox.util.DateUtil.getTodayDate;
 
 public class PlanActivity extends AppCompatActivity {
 
