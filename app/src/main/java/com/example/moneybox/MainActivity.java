@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -22,22 +23,14 @@ import android.view.MenuItem;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import static com.example.moneybox.MainActivity.fileIsExists;
 import static com.example.moneybox.util.DateUtil.getCurrentDate;
-import static com.example.moneybox.util.DateUtil.getTime;
-import static com.example.moneybox.util.DateUtil.getTodayDate;
 import static com.example.moneybox.util.DateUtil.getTomorrowDate;
 
 public class MainActivity extends AppCompatActivity
@@ -52,10 +45,10 @@ public class MainActivity extends AppCompatActivity
     int TotalVal = 0;
     int PlanGoal = 0;
     int hasNewData = 0;
-    ScheduledExecutorService mUpdateDataThreadPool = Executors.newScheduledThreadPool(1);
 
     OkSingleton client = OkSingleton.getInstance();
     ExecutorService taskThreadPool = ThreadPoolSingleton.getThreadPool();
+    private Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,10 +65,7 @@ public class MainActivity extends AppCompatActivity
         }
         else Log.d(TAG, "onCreate: SQL is not exit!");
 
-        //getDataFromLW5(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
 
-
-        //后期计划添加splash启动页面
         //可收缩的Toolbar的显示设置
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -100,8 +90,7 @@ public class MainActivity extends AppCompatActivity
         recyclerView.setAdapter(adapter);
 
 
-        startUpdateDataThreadPool();   //开启接收数据线程池
-        //TODO:除了定时UpdateData的线程池，还需要一个普通的线程池执行一般任务
+        startGetData();   //开启接收数据定时任务
 
         Log.d(TAG, "onCreate: execute");
     }
@@ -109,16 +98,19 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
-        Log.d(TAG, "onStop: stopppppppp");
+        Log.d(TAG, "onStop: stop the period task updateData");
         //暂停定时任务
+        handler.removeCallbacks(GetDataPeriod);
         super.onStop();
     }
 
     @Override
     protected void onRestart() {
         //重启定时任务
+        startGetData();
+        Log.d(TAG, "onRestart: noooooooooooooooooooooooooo");
         SharedPreferences pref  = getSharedPreferences("data", MODE_PRIVATE);
-        //FIXME:这个hasWithdrawMoney好像没有用到。。。。。。。。
+        //hasWithdrawMoney表示是否有过取钱的行为
         boolean hasWithdrawMoney = pref.getBoolean("hasWithdrawMoney", false);
         if (hasWithdrawMoney) {
             hasWithdrawMoney = false;
@@ -205,6 +197,21 @@ public class MainActivity extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch(requestCode) {
+            case 1:
+                if (resultCode == RESULT_OK) {
+                    boolean returnData = data.getBooleanExtra("hasWithdrawMoney", false);
+                    Log.d(TAG, "onActivityResult: yesssssssssss " + returnData);
+                    //TODO
+                }
+                break;
+            default:    
+        }
+        
+    }
+
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -226,7 +233,7 @@ public class MainActivity extends AppCompatActivity
 
         } else if (id == R.id.nav_lock) {
             Intent intent = new Intent(this, UnlockActivity.class);
-            startActivity(intent);
+            startActivityForResult(intent, 1);
         } else if (id == R.id.nav_about) {
             Intent intent = new Intent(this, AboutActivity.class);
             startActivity(intent);
@@ -241,26 +248,41 @@ public class MainActivity extends AppCompatActivity
     /**
      * 开启定时查看有没有新数据的线程池
      */
-    public void startUpdateDataThreadPool() {
+    public void startGetData() {
 
-        SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-        PlanGoal = pref.getInt("PlanGoal", 0);
+        //SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
+        //PlanGoal = pref.getInt("PlanGoal", 0);
 
 
-        Log.d(TAG, "onCreate: starting ScheduledExecutorService. update data every 3 Seconds");
+        Log.d(TAG, "onCreate: starting  get data every 3 Seconds");
 
-        mUpdateDataThreadPool.scheduleWithFixedDelay(new Runnable() {
+        handler.postDelayed(GetDataPeriod, 3000);
+        /*mUpdateDataThreadPool.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 Log.d(TAG, "run: start time: " + lastRequestDate + "............................");
                 getDataFromLW5(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
                 Log.d(TAG, "run: end.......................................................");
-
             }
-        }, 0, 3, TimeUnit.SECONDS);
+        }, 0, 3, TimeUnit.SECONDS);*/
     }
 
+    private Runnable GetDataPeriod = new Runnable() {
+        @Override
+        public void run() {
+            Log.d(TAG, "run: start time: " + lastRequestDate + "............................");
+            taskThreadPool.execute(getData);
+            Log.d(TAG, "run: end.......................................................");
+            handler.postDelayed(this, 3000);
+        }
+    };
 
+    private Runnable getData = new Runnable() {
+        @Override
+        public void run() {
+            getDataFromLW5(lastRequestDate.substring(0, lastRequestDate.indexOf(" ")));
+        }
+    };
 
     /**
      * 从乐联网(LEWEI50)获取数据，发送Http Request时加上请求数据的开始日期以及截止日期，并添加userkey的property
