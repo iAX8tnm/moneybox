@@ -2,6 +2,7 @@ package com.example.moneybox;
 
 import android.content.ContentValues;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -28,9 +29,9 @@ public class UnlockActivity extends AppCompatActivity {
     //SocketClient socket = SocketClient.getInstance();
     private mDatabaseHelper dbHelper = new mDatabaseHelper(this, "Deposit.db", null, 2);
     private String password;
-    boolean isPassWordCorrect = false;
     private static final String TAG = "UnlockActivity";
     boolean isSettingPassword = false;
+    boolean hasWithdrawMoney = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,6 +71,10 @@ public class UnlockActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home: {
+                Log.d(TAG, "onOptionsItemSelected: yesssssssssssssss");
+                Intent intent = new Intent();
+                intent.putExtra("hasWithdrawMoney", hasWithdrawMoney);
+                setResult(RESULT_OK, intent);
                 finish();
                 return true;
             }
@@ -92,6 +97,10 @@ public class UnlockActivity extends AppCompatActivity {
         /*if (socket.getIsConnected()) {
             socket.disconnectSocketServer();
         }*/
+        Log.d(TAG, "onBackPressed: yesssssssssssss");
+        Intent intent = new Intent();
+        intent.putExtra("hasWithdrawMoney", hasWithdrawMoney);
+        setResult(RESULT_OK, intent);
         super.onBackPressed();
     }
 
@@ -118,9 +127,7 @@ public class UnlockActivity extends AppCompatActivity {
                 Toast.makeText(UnlockActivity.this, "密码输入错误", Toast.LENGTH_SHORT).show();
             }
         } else {                                                        //真的在开锁
-            sendPassword();
-            if (isPassWordCorrect) {
-                isPassWordCorrect = false;
+            if (isPasswordCorrect()) {
                 AlertDialog.Builder dialog = new AlertDialog.Builder(UnlockActivity.this);
                 final EditText editText = new EditText(UnlockActivity.this);
                 editText.setInputType(InputType.TYPE_CLASS_NUMBER);
@@ -170,31 +177,9 @@ public class UnlockActivity extends AppCompatActivity {
                                 editor.apply();
                                 Log.d(TAG, "run: TotalVal " + TotalVal +" is saved at SharedPreferences data.xml");
 
-                                //把存钱数据即刻更新到存钱宝中
-
-                                int PlanGoal = pref.getInt("PlanGoal", 0);
-                                int count = 1;
-                                int TmpPlanGoal = PlanGoal;
-
-                                while((TmpPlanGoal /= 10) > 0) {
-                                    count++;
-                                }
-                                String TmpGoal = Integer.toString(PlanGoal);
-                                for (int i = 0; i < (7-count); i++)
-                                    TmpGoal += "\n";
-                                //socket.sendMessage(TmpGoal + "GOAL");
-
-                                TotalVal = pref.getInt("TotalVal", 0);
-                                count = 1;
-                                int TmpTotalVal = TotalVal;
-                                while((TmpTotalVal /= 10) > 0) {
-                                    count++;
-                                }
-                                String TmpVal = Integer.toString(TotalVal);
-                                for (int i = 0; i < (7-count); i++)
-                                    TmpVal += "\n";
-                                //socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");//TODO
-
+                                /*//把存钱数据即刻更新到存钱宝中
+                                //socket.sendMessage(TmpGoal + "GOAL" + TmpVal + "VAL");*/
+                                //TODO
 
 
                                 //然后再更新DailyDeposit
@@ -227,6 +212,7 @@ public class UnlockActivity extends AppCompatActivity {
                                 cursor.close();
 
                                 //还要通知MainActivity更新saveMoneyList
+                                hasWithdrawMoney = true;
                                 editor.putBoolean("hasWithdrawMoney", true);
                                 editor.apply();
                             }
@@ -248,20 +234,20 @@ public class UnlockActivity extends AppCompatActivity {
         }
     }
 
-    public void sendPassword() {
+    public boolean isPasswordCorrect() {
         EditText editText = findViewById(R.id.et_password);
         String password = editText.getText().toString();
         if (password.equals(this.password)) {
-            Log.d(TAG, "sendPassword: password correct!");
-            isPassWordCorrect = true;
+            Log.d(TAG, "isPasswordCorrect: password correct!");
+            return true;
             /*if (socket != null)
                 if (socket.getIsConnected())
                     socket.sendMessage("UNLOCK");*/
         } else {
-            isPassWordCorrect = false;
             editText.setText("");
             Toast.makeText(UnlockActivity.this, "密码输入错误", Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "sendPassword: password is not correct!");
+            Log.d(TAG, "isPasswordCorrect: password is not correct!");
+            return false;
         }
         
 
